@@ -1,0 +1,166 @@
+# Auto PR Description Configuration
+# This file controls how automatic PR descriptions are generated
+
+# Enable/disable auto-generation
+enabled: true
+
+# Skip auto-generation if PR already has description longer than this (in characters)
+skip_if_description_length: 100
+
+# File type categories for change analysis
+file_categories:
+  frontend_components:
+    name: "Frontend Components"
+    patterns: 
+      - "src/components/**/*.tsx"
+      - "src/components/**/*.jsx"
+      - "components/**/*.tsx"
+      - "components/**/*.jsx"
+  
+  pages_routes:
+    name: "Pages & Routes"
+    patterns:
+      - "src/app/**/*.tsx"
+      - "src/app/**/*.jsx"
+      - "src/pages/**/*.tsx"
+      - "src/pages/**/*.jsx"
+      - "pages/**/*.tsx"
+      - "pages/**/*.jsx"
+  
+  styles:
+    name: "Styles"
+    patterns:
+      - "**/*.css"
+      - "**/*.scss"
+      - "**/*.sass"
+      - "**/tailwind*"
+      - "src/styles/**/*"
+  
+  configuration:
+    name: "Configuration"
+    patterns:
+      - "**/*.config.js"
+      - "**/*.config.ts"
+      - "**/*.config.mjs"
+      - "**/*.json"
+      - "**/*.yml"
+      - "**/*.yaml"
+      - ".*rc"
+  
+  documentation:
+    name: "Documentation"
+    patterns:
+      - "**/*.md"
+      - "**/*.mdx"
+      - "docs/**/*"
+  
+  database:
+    name: "Database"
+    patterns:
+      - "prisma/**/*"
+      - "migrations/**/*"
+      - "**/*.sql"
+  
+  api_backend:
+    name: "API/Backend"
+    patterns:
+      - "src/api/**/*"
+      - "src/server/**/*"
+      - "src/trpc/**/*"
+      - "src/lib/**/*"
+      - "api/**/*"
+      - "server/**/*"
+      - "lib/**/*"
+  
+  tests:
+    name: "Tests"
+    patterns:
+      - "**/*.test.*"
+      - "**/*.spec.*"
+      - "**/__tests__/**/*"
+      - "tests/**/*"
+      - "test/**/*"
+  
+  workflows:
+    name: "GitHub Workflows"
+    patterns:
+      - ".github/**/*"
+
+# Conventional commit types to recognize
+conventional_commits:
+  feat: "✨ New Features"
+  fix: "🐛 Bug Fixes"
+  docs: "📚 Documentation"
+  style: "💄 Style Changes"
+  refactor: "🔧 Improvements & Refactoring"
+  test: "🧪 Tests"
+  chore: "🏠 Chores"
+  perf: "⚡ Performance"
+  ci: "👷 CI/CD"
+  build: "📦 Build"
+
+# Alternative commit patterns to catch (case-insensitive)
+alternative_patterns:
+  features:
+    keywords: ["add", "implement", "create", "introduce"]
+    section: "✨ New Features"
+  
+  fixes:
+    keywords: ["fix", "bug", "resolve", "correct"]
+    section: "🐛 Bug Fixes"
+  
+  improvements:
+    keywords: ["improve", "update", "optimize", "enhance", "refactor"]
+    section: "🔧 Improvements & Refactoring"
+
+# Maximum files to show per category (to avoid overly long descriptions)
+max_files_per_category: 8
+
+# Testing checklist items based on file types
+testing_checklist:
+  base:
+    - "Code builds successfully"
+    - "Linting passes"
+    - "Manual testing completed"
+    - "No breaking changes introduced"
+  
+  frontend_components:
+    - "UI components render correctly"
+    - "Responsive design verified"
+  
+  pages_routes:
+    - "UI components render correctly"
+    - "Responsive design verified"
+    - "Routing works correctly"
+  
+  api_backend:
+    - "API endpoints tested"
+    - "Error handling verified"
+  
+  database:
+    - "Database migrations tested"
+    - "Data integrity verified"
+  
+  tests:
+    - "New tests pass"
+    - "Existing tests still pass"
+  
+  workflows:
+    - "Workflow syntax validated"
+    - "CI/CD pipeline tested"
+
+# Deployment checklist items based on file types
+deployment_checklist:
+  base:
+    - "Ready for deployment"
+    - "Environment variables updated (if needed)"
+    - "Dependencies updated in package.json (if needed)"
+  
+  database:
+    - "Database migrations ready for production"
+  
+  configuration:
+    - "Configuration changes documented"
+  
+  workflows:
+    - "CI/CD changes tested in staging"
