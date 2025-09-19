@@ -235,40 +235,20 @@ jobs:
             description += `*🤖 This description was automatically generated based on the changes in this PR.*\n`;
             description += `*Last updated: ${new Date().toISOString().split('T')[0]} at ${new Date().toTimeString().split(' ')[0]}*\n`;
 
-            // Set the output using core.setOutput to preserve formatting
-            const fs = require('fs');
-            fs.writeFileSync(process.env.GITHUB_OUTPUT, `description<<EOF\n${description}\nEOF\n`, { flag: 'a' });
-
-            return description;
-
-      - name: Debug generated description
-        run: |
-          echo "=== Generated PR Description ==="
-          echo "Description length: ${#DESCRIPTION}"
-          echo "First 200 characters:"
-          echo "${DESCRIPTION:0:200}..."
-        env:
-          DESCRIPTION: ${{ steps.generate-description.outputs.description }}
-      - name: Update PR description
-        uses: actions/github-script@v7
-        env:
-          PR_DESCRIPTION: ${{ steps.generate-description.outputs.description }}
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const description = process.env.PR_DESCRIPTION;
-
-            // Only update if we have a description
-            if (!description || description === 'null' || description.trim() === '') {
-              console.log('No description generated, skipping update');
-              return;
-            }
+            // Update PR description directly to avoid newline issues
+            console.log('Generated description length:', description.length);
+            console.log('First 200 characters:', description.substring(0, 200));
 
             await github.rest.pulls.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
+              pull_number: pr.number,
               body: description
             });
 
             console.log('PR description updated successfully!');
+
+            return 'Description updated successfully';
+
+      - name: Debug generated description
+        run: echo "PR description has been updated automatically"
