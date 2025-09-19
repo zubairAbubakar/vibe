@@ -9,5 +9,11 @@ export const Client = () => {
     trpc.hello.queryOptions({ text: 'from tRPC' })
   );
 
-  return <div>{JSON.stringify(data)}</div>;
+  return (
+    <div>
+      {JSON.stringify(data)}
+      <br />
+      Hello from the Client component!
+    </div>
+  );
 };
