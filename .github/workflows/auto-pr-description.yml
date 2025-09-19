@@ -241,8 +241,7 @@ jobs:
             console.log('Generated description length:', description.length);
             console.log('First 200 characters:', description.substring(0, 200));
 
-            // Set output for next step
-            const core = require('@actions/core');
+            // Set output for next step (core is already available in github-script)
             core.setOutput('description', description);
 
             return 'Description generated successfully';
