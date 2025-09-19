@@ -42,9 +42,11 @@ jobs:
             const changedFiles = changedFilesRaw ? changedFilesRaw.split(',').map(f => f.trim()).filter(f => f) : [];
             console.log('changedFiles:', changedFiles);
 
-            // Skip if PR already has a substantial description (more than 100 chars)
-            if (pr.body && pr.body.trim().length > 100) {
+            // Skip if PR already has a substantial description (more than 200 chars and doesn't look like a template)
+            if (pr.body && pr.body.trim().length > 200 && !pr.body.includes('🤖 This description was automatically generated')) {
               console.log('PR already has a substantial description, skipping auto-generation');
+              console.log('Current PR body length:', pr.body.trim().length);
+              console.log('Current PR body preview:', pr.body.substring(0, 100));
               return null;
             }
 
@@ -235,20 +237,47 @@ jobs:
             description += `*🤖 This description was automatically generated based on the changes in this PR.*\n`;
             description += `*Last updated: ${new Date().toISOString().split('T')[0]} at ${new Date().toTimeString().split(' ')[0]}*\n`;
 
-            // Update PR description directly to avoid newline issues
+            // Log for debugging
             console.log('Generated description length:', description.length);
             console.log('First 200 characters:', description.substring(0, 200));
+
+            // Set output for next step
+            const core = require('@actions/core');
+            core.setOutput('description', description);
+
+            return 'Description generated successfully';
+
+      - name: Debug generated description
+        run: |
+          echo "=== Generated PR Description ==="
+          echo "Description length: ${#DESCRIPTION}"
+          echo "First 200 characters:"
+          echo "${DESCRIPTION:0:200}..."
+        env:
+          DESCRIPTION: ${{ steps.generate-description.outputs.description }}
+
+      - name: Update PR description
+        uses: actions/github-script@v7
+        env:
+          PR_DESCRIPTION: ${{ steps.generate-description.outputs.description }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const description = process.env.PR_DESCRIPTION;
+
+            // Only update if we have a description
+            if (!description || description === 'null' || description.trim() === '') {
+              console.log('No description generated, skipping update');
+              return;
+            }
+
+            console.log('Updating PR with description length:', description.length);
 
             await github.rest.pulls.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: pr.number,
+              pull_number: context.payload.pull_request.number,
               body: description
             });
 
             console.log('PR description updated successfully!');
-
-            return 'Description updated successfully';
-
-      - name: Debug generated description
-        run: echo "PR description has been updated automatically"
