@@ -38,7 +38,9 @@ jobs:
             // Get PR details
             const pr = context.payload.pull_request;
             const changedFilesRaw = process.env.CHANGED_FILES;
-            const changedFiles = changedFilesRaw ? changedFilesRaw.split(',').filter(f => f.trim()) : [];
+            console.log('CHANGED_FILES env:', changedFilesRaw);
+            const changedFiles = changedFilesRaw ? changedFilesRaw.split(',').map(f => f.trim()).filter(f => f) : [];
+            console.log('changedFiles:', changedFiles);
             
             // Skip if PR already has a substantial description (more than 100 chars)
             if (pr.body && pr.body.trim().length > 100) {
@@ -61,7 +63,7 @@ jobs:
               'Pages & Routes': changedFiles.filter(f => f.includes('src/app/') && (f.endsWith('.tsx') || f.endsWith('.jsx'))),
               'Styles': changedFiles.filter(f => f.endsWith('.css') || f.includes('tailwind') || f.endsWith('.scss')),
               'Configuration': changedFiles.filter(f => f.endsWith('.json') || f.endsWith('.config.js') || f.endsWith('.config.ts') || f.endsWith('.config.mjs') || f.endsWith('.yml') || f.endsWith('.yaml')),
-              'Documentation': changedFiles.filter(f => f.endsWith('.md') || f.endsWith('.mdx')),
+              'Documentation': changedFiles.filter(f => typeof f === 'string' && (f.endsWith('.md') || f.endsWith('.mdx'))),
               'Database': changedFiles.filter(f => f.includes('prisma/') || f.includes('migrations/')),
               'API/Backend': changedFiles.filter(f => f.includes('api/') || f.includes('server/') || f.includes('trpc/') || f.includes('lib/')),
               'Tests': changedFiles.filter(f => f.includes('test') || f.includes('spec') || f.includes('__tests__')),
