@@ -238,7 +238,13 @@ jobs:
             return description;
 
       - name: Debug generated description
-        run: echo "${{ steps.generate-description.outputs.result }}"
+        run: |
+          echo "=== Generated PR Description ==="
+          echo "Description length: ${#PR_DESCRIPTION}"
+          echo "First 200 characters:"
+          echo "${PR_DESCRIPTION:0:200}..."
+        env:
+          PR_DESCRIPTION: ${{ steps.generate-description.outputs.result }}
       - name: Update PR description
         uses: actions/github-script@v7
         env:
