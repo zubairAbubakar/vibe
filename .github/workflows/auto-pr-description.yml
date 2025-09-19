@@ -235,33 +235,34 @@ jobs:
             description += `*🤖 This description was automatically generated based on the changes in this PR.*\n`;
             description += `*Last updated: ${new Date().toISOString().split('T')[0]} at ${new Date().toTimeString().split(' ')[0]}*\n`;
 
+            // Set the output using core.setOutput to preserve formatting
+            const fs = require('fs');
+            fs.writeFileSync(process.env.GITHUB_OUTPUT, `description<<EOF\n${description}\nEOF\n`, { flag: 'a' });
+
             return description;
 
       - name: Debug generated description
         run: |
           echo "=== Generated PR Description ==="
-          echo "Description length: ${#PR_DESCRIPTION}"
+          echo "Description length: ${#DESCRIPTION}"
           echo "First 200 characters:"
-          echo "${PR_DESCRIPTION:0:200}..."
+          echo "${DESCRIPTION:0:200}..."
         env:
-          PR_DESCRIPTION: ${{ steps.generate-description.outputs.result }}
+          DESCRIPTION: ${{ steps.generate-description.outputs.description }}
       - name: Update PR description
         uses: actions/github-script@v7
         env:
-          PR_DESCRIPTION: ${{ steps.generate-description.outputs.result }}
+          PR_DESCRIPTION: ${{ steps.generate-description.outputs.description }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            let description = process.env.PR_DESCRIPTION;
+            const description = process.env.PR_DESCRIPTION;
 
             // Only update if we have a description
             if (!description || description === 'null' || description.trim() === '') {
               console.log('No description generated, skipping update');
               return;
             }
-
-            // Convert escaped newlines to actual newlines
-            description = description.replace(/\\n/g, '\n');
 
             await github.rest.pulls.update({
               owner: context.repo.owner,
