@@ -29,7 +29,7 @@ jobs:
               repo: context.repo.repo,
               pull_number: context.payload.pull_request.number
             });
-            const conventionalPattern = /^(feat|merge|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?\s.+/;
+            const conventionalPattern = /^(feat|merge|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?:?\s.+/;
             const validCommits = [];
             const invalidCommits = [];
             commits.data.forEach(commit => {
