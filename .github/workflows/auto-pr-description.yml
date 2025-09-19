@@ -252,13 +252,16 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const description = process.env.PR_DESCRIPTION;
+            let description = process.env.PR_DESCRIPTION;
 
             // Only update if we have a description
             if (!description || description === 'null' || description.trim() === '') {
               console.log('No description generated, skipping update');
               return;
             }
+
+            // Convert escaped newlines to actual newlines
+            description = description.replace(/\\n/g, '\n');
 
             await github.rest.pulls.update({
               owner: context.repo.owner,
