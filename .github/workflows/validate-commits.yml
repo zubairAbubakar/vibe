@@ -18,7 +18,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { context } = require('@actions/github');
+            //const { context } = require('@actions/github');
             // Get commits in the PR
             const commits = await github.rest.pulls.listCommits({
               owner: context.repo.owner,
