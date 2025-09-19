@@ -29,6 +29,22 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## 🤖 Auto-Generated PR Messages
+
+This repository features automated PR description generation! When you create a pull request:
+
+- **Smart Analysis**: Automatically categorizes your changes (Frontend, API, Database, etc.)
+- **Conventional Commits**: Recognizes and formats conventional commit messages
+- **Dynamic Checklists**: Generates relevant testing and deployment checklists
+- **Respectful**: Only auto-generates if PR description is empty or minimal
+
+### Quick Start:
+1. Use conventional commits: `feat: add feature` or `fix: resolve bug`
+2. Create your PR - description will be auto-generated
+3. Review and edit as needed
+
+📚 [Full Documentation](.github/AUTO_PR_DOCUMENTATION.md) | ⚙️ [Configuration](.github/auto-pr-config.yml)
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.

@@ -1,0 +1,256 @@
+name: Auto Generate PR Description
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  auto-generate-description:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files_separator: ','
+          
+      - name: Generate PR description
+        id: generate-description
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { context } = require('@actions/github');
+            
+            // Get PR details
+            const pr = context.payload.pull_request;
+            const changedFilesRaw = `${{ steps.changed-files.outputs.all_changed_files }}`;
+            const changedFiles = changedFilesRaw ? changedFilesRaw.split(',').filter(f => f.trim()) : [];
+            
+            // Skip if PR already has a substantial description (more than 100 chars)
+            if (pr.body && pr.body.trim().length > 100) {
+              console.log('PR already has a substantial description, skipping auto-generation');
+              return null;
+            }
+            
+            // Get commit messages
+            const commits = await github.rest.pulls.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+            
+            const commitMessages = commits.data.map(commit => commit.commit.message);
+            
+            // Analyze changes by file type
+            const fileTypes = {
+              'Frontend Components': changedFiles.filter(f => f.includes('src/components/') && (f.endsWith('.tsx') || f.endsWith('.jsx'))),
+              'Pages & Routes': changedFiles.filter(f => f.includes('src/app/') && (f.endsWith('.tsx') || f.endsWith('.jsx'))),
+              'Styles': changedFiles.filter(f => f.endsWith('.css') || f.includes('tailwind') || f.endsWith('.scss')),
+              'Configuration': changedFiles.filter(f => f.endsWith('.json') || f.endsWith('.config.js') || f.endsWith('.config.ts') || f.endsWith('.config.mjs') || f.endsWith('.yml') || f.endsWith('.yaml')),
+              'Documentation': changedFiles.filter(f => f.endsWith('.md') || f.endsWith('.mdx')),
+              'Database': changedFiles.filter(f => f.includes('prisma/') || f.includes('migrations/')),
+              'API/Backend': changedFiles.filter(f => f.includes('api/') || f.includes('server/') || f.includes('trpc/') || f.includes('lib/')),
+              'Tests': changedFiles.filter(f => f.includes('test') || f.includes('spec') || f.includes('__tests__')),
+              'GitHub Workflows': changedFiles.filter(f => f.includes('.github/'))
+            };
+            
+            // Analyze commit patterns
+            const conventionalCommits = {
+              feat: commitMessages.filter(msg => /^feat(\(.+\))?:/i.test(msg)),
+              fix: commitMessages.filter(msg => /^fix(\(.+\))?:/i.test(msg)),
+              docs: commitMessages.filter(msg => /^docs(\(.+\))?:/i.test(msg)),
+              style: commitMessages.filter(msg => /^style(\(.+\))?:/i.test(msg)),
+              refactor: commitMessages.filter(msg => /^refactor(\(.+\))?:/i.test(msg)),
+              test: commitMessages.filter(msg => /^test(\(.+\))?:/i.test(msg)),
+              chore: commitMessages.filter(msg => /^chore(\(.+\))?:/i.test(msg))
+            };
+            
+            // Also catch non-conventional patterns
+            const otherPatterns = {
+              features: commitMessages.filter(msg => !Object.values(conventionalCommits).flat().includes(msg) && 
+                (msg.toLowerCase().includes('add') || msg.toLowerCase().includes('implement') || msg.toLowerCase().includes('create'))),
+              fixes: commitMessages.filter(msg => !Object.values(conventionalCommits).flat().includes(msg) && 
+                (msg.toLowerCase().includes('fix') || msg.toLowerCase().includes('bug') || msg.toLowerCase().includes('resolve'))),
+              improvements: commitMessages.filter(msg => !Object.values(conventionalCommits).flat().includes(msg) && 
+                (msg.toLowerCase().includes('improve') || msg.toLowerCase().includes('update') || msg.toLowerCase().includes('optimize')))
+            };
+            
+            // Generate description
+            let description = `## 🚀 Changes Summary\n\n`;
+            
+            // Add high-level summary based on PR title and branch
+            if (pr.title) {
+              description += `This PR ${pr.title.toLowerCase().startsWith('feat') ? 'introduces new features' : 
+                           pr.title.toLowerCase().startsWith('fix') ? 'fixes bugs and issues' :
+                           pr.title.toLowerCase().startsWith('refactor') ? 'refactors existing code' :
+                           pr.title.toLowerCase().startsWith('docs') ? 'updates documentation' :
+                           pr.title.toLowerCase().startsWith('test') ? 'adds or updates tests' :
+                           'implements changes'} in the **${pr.head.ref}** branch.\n\n`;
+            }
+            
+            // Add conventional commit summaries
+            if (conventionalCommits.feat.length > 0 || otherPatterns.features.length > 0) {
+              description += `### ✨ New Features\n`;
+              [...conventionalCommits.feat, ...otherPatterns.features].forEach(msg => {
+                const cleanMsg = msg.replace(/^(feat(\(.+\))?:|add:|feature:|implement:|create:)/i, '').trim();
+                description += `- ${cleanMsg}\n`;
+              });
+              description += `\n`;
+            }
+            
+            if (conventionalCommits.fix.length > 0 || otherPatterns.fixes.length > 0) {
+              description += `### 🐛 Bug Fixes\n`;
+              [...conventionalCommits.fix, ...otherPatterns.fixes].forEach(msg => {
+                const cleanMsg = msg.replace(/^(fix(\(.+\))?:|bug:|bugfix:|resolve:)/i, '').trim();
+                description += `- ${cleanMsg}\n`;
+              });
+              description += `\n`;
+            }
+            
+            if (conventionalCommits.refactor.length > 0 || otherPatterns.improvements.length > 0) {
+              description += `### 🔧 Improvements & Refactoring\n`;
+              [...conventionalCommits.refactor, ...otherPatterns.improvements].forEach(msg => {
+                const cleanMsg = msg.replace(/^(refactor(\(.+\))?:|improve:|update:|optimize:)/i, '').trim();
+                description += `- ${cleanMsg}\n`;
+              });
+              description += `\n`;
+            }
+            
+            if (conventionalCommits.docs.length > 0) {
+              description += `### 📚 Documentation\n`;
+              conventionalCommits.docs.forEach(msg => {
+                const cleanMsg = msg.replace(/^docs(\(.+\))?:/i, '').trim();
+                description += `- ${cleanMsg}\n`;
+              });
+              description += `\n`;
+            }
+            
+            if (conventionalCommits.test.length > 0) {
+              description += `### 🧪 Tests\n`;
+              conventionalCommits.test.forEach(msg => {
+                const cleanMsg = msg.replace(/^test(\(.+\))?:/i, '').trim();
+                description += `- ${cleanMsg}\n`;
+              });
+              description += `\n`;
+            }
+            
+            // Add files changed breakdown
+            description += `## 📁 Files Changed (${changedFiles.length})\n\n`;
+            let hasChanges = false;
+            
+            Object.entries(fileTypes).forEach(([type, files]) => {
+              if (files.length > 0) {
+                hasChanges = true;
+                description += `### ${type} (${files.length})\n`;
+                files.slice(0, 8).forEach(file => {
+                  description += `- \`${file}\`\n`;
+                });
+                if (files.length > 8) {
+                  description += `- *... and ${files.length - 8} more files*\n`;
+                }
+                description += `\n`;
+              }
+            });
+            
+            if (!hasChanges && changedFiles.length > 0) {
+              description += `### Other Files\n`;
+              changedFiles.slice(0, 10).forEach(file => {
+                description += `- \`${file}\`\n`;
+              });
+              if (changedFiles.length > 10) {
+                description += `- *... and ${changedFiles.length - 10} more files*\n`;
+              }
+              description += `\n`;
+            }
+            
+            // Add technical details
+            description += `## 🔍 Technical Details\n\n`;
+            description += `- **Branch**: \`${pr.head.ref}\` → \`${pr.base.ref}\`\n`;
+            description += `- **Commits**: ${commits.data.length}\n`;
+            description += `- **Files Modified**: ${changedFiles.length}\n`;
+            description += `- **Additions**: +${pr.additions || 0} lines\n`;
+            description += `- **Deletions**: -${pr.deletions || 0} lines\n\n`;
+            
+            // Add dynamic testing checklist based on file types
+            description += `## ✅ Testing Checklist\n\n`;
+            description += `- [ ] Code builds successfully\n`;
+            description += `- [ ] Linting passes\n`;
+            description += `- [ ] Manual testing completed\n`;
+            description += `- [ ] No breaking changes introduced\n`;
+            
+            if (fileTypes['Frontend Components'].length > 0 || fileTypes['Pages & Routes'].length > 0) {
+              description += `- [ ] UI components render correctly\n`;
+              description += `- [ ] Responsive design verified\n`;
+            }
+            if (fileTypes['API/Backend'].length > 0) {
+              description += `- [ ] API endpoints tested\n`;
+              description += `- [ ] Error handling verified\n`;
+            }
+            if (fileTypes['Database'].length > 0) {
+              description += `- [ ] Database migrations tested\n`;
+              description += `- [ ] Data integrity verified\n`;
+            }
+            if (fileTypes['Tests'].length > 0) {
+              description += `- [ ] New tests pass\n`;
+              description += `- [ ] Existing tests still pass\n`;
+            }
+            if (fileTypes['GitHub Workflows'].length > 0) {
+              description += `- [ ] Workflow syntax validated\n`;
+              description += `- [ ] CI/CD pipeline tested\n`;
+            }
+            
+            description += `\n`;
+            
+            // Add deployment checklist
+            description += `## 🚢 Deployment Checklist\n\n`;
+            description += `- [ ] Ready for deployment\n`;
+            description += `- [ ] Environment variables updated (if needed)\n`;
+            description += `- [ ] Dependencies updated in package.json (if needed)\n`;
+            if (fileTypes['Database'].length > 0) {
+              description += `- [ ] Database migrations ready for production\n`;
+            }
+            if (fileTypes['Configuration'].length > 0) {
+              description += `- [ ] Configuration changes documented\n`;
+            }
+            description += `\n`;
+            
+            // Add footer
+            description += `---\n`;
+            description += `*🤖 This description was automatically generated based on the changes in this PR.*\n`;
+            description += `*Last updated: ${new Date().toISOString().split('T')[0]} at ${new Date().toTimeString().split(' ')[0]}*\n`;
+            
+            return description;
+            
+      - name: Update PR description
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const description = `${{ steps.generate-description.outputs.result }}`;
+            
+            // Only update if we have a description
+            if (!description || description === 'null' || description.trim() === '') {
+              console.log('No description generated, skipping update');
+              return;
+            }
+            
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              body: description
+            });
+            
+            console.log('PR description updated successfully!');
