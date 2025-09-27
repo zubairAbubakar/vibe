@@ -3,7 +3,8 @@ import { gemini, createAgent, createTool } from '@inngest/agent-kit';
 
 import { inngest } from './client';
 import { getSandbox } from './utils';
-import { tr } from 'date-fns/locale';
+import path from 'path';
+import { PROMPT } from '@/prompts';
 
 export const helloWorld = inngest.createFunction(
   { id: 'hello-world' },
@@ -17,8 +18,9 @@ export const helloWorld = inngest.createFunction(
 
     const codeAgent = createAgent({
       name: 'code-agent',
-      system:
-        'You are an expert nextjs developer. You write readable, maintainable code. You write simple Next.js & React code snippets.',
+      description:
+        'An AI agent that can write and execute code in a code interpreter sandbox.',
+      system: PROMPT,
       model: gemini({ model: 'gemini-2.0-flash' }),
       tools: [
         createTool({
@@ -78,6 +80,27 @@ export const helloWorld = inngest.createFunction(
             if (typeof newFiles === 'object') {
               network.state.data.files = newFiles;
             }
+          },
+        }),
+        createTool({
+          name: 'readFiles',
+          description: 'Read files in the code interpreter sandbox.',
+          handler: async ({ files }: { files: string[] }) => {
+            return await step?.run('readFiles', async () => {
+              try {
+                const sandbox = await getSandbox(sandboxId);
+                const contents = [];
+                for (const file of files) {
+                  const content = await sandbox.files.read(file);
+                  contents.push({ path: file, content });
+                }
+                return JSON.stringify(contents);
+              } catch (error) {
+                return {
+                  error: `Failed to read files: ${error}`,
+                };
+              }
+            });
           },
         }),
       ],
