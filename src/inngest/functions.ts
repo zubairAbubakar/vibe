@@ -1,15 +1,19 @@
 import { Sandbox } from '@e2b/code-interpreter';
-import { gemini, createAgent, createTool } from '@inngest/agent-kit';
+import {
+  createAgent,
+  createTool,
+  createNetwork,
+  openai,
+} from '@inngest/agent-kit';
 
 import { inngest } from './client';
-import { getSandbox } from './utils';
-import path from 'path';
+import { getSandbox, lastAssistantTextMessageContent } from './utils';
 import { PROMPT } from '@/prompts';
+import z from 'zod';
 
 export const helloWorld = inngest.createFunction(
   { id: 'hello-world' },
   { event: 'test/hello.world' },
-
   async ({ event, step }) => {
     const sandboxId = await step.run('get-sandbox-id', async () => {
       const sandbox = await Sandbox.create('vibe-nextjs-test__-3');
@@ -21,7 +25,7 @@ export const helloWorld = inngest.createFunction(
       description:
         'An AI agent that can write and execute code in a code interpreter sandbox.',
       system: PROMPT,
-      model: gemini({ model: 'gemini-2.0-flash' }),
+      model: openai({ model: 'gpt-4o' }),
       tools: [
         createTool({
           name: 'terminal',
@@ -54,10 +58,15 @@ export const helloWorld = inngest.createFunction(
           name: 'createOrUpdateFiles',
           description:
             'Create or update files in the code interpreter sandbox.',
-          handler: async (
-            { files }: { files: Array<{ path: string; content: string }> },
-            { step, network }
-          ) => {
+          parameters: z.object({
+            files: z.array(
+              z.object({
+                path: z.string(),
+                content: z.string(),
+              })
+            ),
+          }),
+          handler: async ({ files }, { step, network }) => {
             const newFiles = await step?.run(
               'createOrUpdateFiles',
               async () => {
@@ -104,11 +113,35 @@ export const helloWorld = inngest.createFunction(
           },
         }),
       ],
+      lifecycle: {
+        onResponse: async ({ result, network }) => {
+          const lastAssistantMessage = lastAssistantTextMessageContent(result);
+          if (lastAssistantMessage && network) {
+            if (lastAssistantMessage.includes('<task_summary>')) {
+              network.state.data.summary = lastAssistantMessage;
+            }
+          }
+          return result;
+        },
+      },
     });
 
-    const { output } = await codeAgent.run(
-      `Write the following code snippet: ${event.data.value}`
-    );
+    const network = createNetwork({
+      name: 'coding-agent-network',
+      agents: [codeAgent],
+      maxIter: 15,
+      router: async ({ network }) => {
+        const summary = network.state.data.summary;
+
+        if (summary) {
+          return;
+        }
+
+        return codeAgent;
+      },
+    });
+
+    const result = await network.run(event.data.value);
 
     const sandboxUrl = await step.run('get-sandbox-url', async () => {
       const sandbox = await getSandbox(sandboxId);
@@ -116,6 +149,11 @@ export const helloWorld = inngest.createFunction(
       return `https://${host}`;
     });
 
-    return { output, sandboxUrl };
+    return {
+      url: sandboxUrl,
+      title: 'Fragment',
+      files: result.state.data.files,
+      summary: result.state.data.summary,
+    };
   }
 );
