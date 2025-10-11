@@ -1,7 +1,14 @@
 'use client';
 
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/components/ui/resizable';
 import { useTRPC } from '@/trpc/client';
 import { useSuspenseQuery } from '@tanstack/react-query';
+import { Suspense } from 'react';
+import { MessagesContainer } from '../components/messages-container';
 
 interface Props {
   projectId: string;
@@ -17,17 +24,26 @@ export const ProjectView = ({ projectId }: Props) => {
   );
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Project: {project?.name}</h1>
-      <p>Created At: {new Date(project?.createdAt || '').toLocaleString()}</p>
-      <h2 className="text-xl font-bold mt-4">Messages:</h2>
-      <ul>
-        {messages?.map((message) => (
-          <li key={message.id}>
-            <p>{message.content}</p>
-          </li>
-        ))}
-      </ul>
+    <div className="h-screen">
+      <ResizablePanelGroup direction="horizontal">
+        <ResizablePanel
+          defaultSize={35}
+          minSize={20}
+          className="flex flex-col min-h-0"
+        >
+          <Suspense fallback={<div>Loading messages...</div>}>
+            <MessagesContainer projectId={projectId} />
+          </Suspense>
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel
+          defaultSize={65}
+          minSize={50}
+          className="flex flex-col min-h-0"
+        >
+          TODO: Preview
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 };
