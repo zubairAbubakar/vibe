@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { useTRPC } from '@/trpc/client';
 import { Form, FormField } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
-import { on } from 'events';
+import { toast } from 'sonner';
 
 interface Props {
   projectId: string;
@@ -28,6 +28,7 @@ export const MessageForm = ({ projectId }: Props) => {
 
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+
   const createMessage = useMutation(
     trpc.messages.create.mutationOptions({
       onSuccess: () => {
@@ -35,6 +36,10 @@ export const MessageForm = ({ projectId }: Props) => {
         queryClient.invalidateQueries(
           trpc.messages.getMany.queryOptions({ projectId })
         );
+        // TODO: Invalidate usage status
+      },
+      onError: (err) => {
+        toast.error(err.message);
       },
     })
   );
