@@ -58,7 +58,7 @@ export const MessagesContainer = ({
               fragment={message.fragment}
               createdAt={message.createdAt}
               isActiveFragment={activeFragment?.id === message.fragment?.id}
-              onFragmentClick={() => {}}
+              onFragmentClick={() => setActiveFragment(message.fragment)}
               type={message.type}
             />
           ))}
