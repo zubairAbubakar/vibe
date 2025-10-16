@@ -18,6 +18,7 @@ import { FragmentWebview } from '../components/fragment-webview';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { CodeView } from '@/components/code-view';
+import { FileExplorer } from '@/components/file-explorer';
 
 interface Props {
   projectId: string;
@@ -81,8 +82,12 @@ export const ProjectView = ({ projectId }: Props) => {
             <TabsContent value="preview">
               {!!activeFragment && <FragmentWebview data={activeFragment} />}
             </TabsContent>
-            <TabsContent value="code">
-              <CodeView language="ts" code="console.log('Hello, world!');" />
+            <TabsContent value="code" className="min-h-0">
+              {!!activeFragment?.files && (
+                <FileExplorer
+                  files={activeFragment.files as { [path: string]: string }}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </ResizablePanel>
