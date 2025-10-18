@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-import { TreeItem } from '@/types';
+import { type TreeItem } from '@/types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -31,22 +31,45 @@ export function convertFilesToTreeItems(files: {
     const parts = path.split('/');
     let currentNode = tree;
 
-    for (let i = 0; i < parts.length; i++) {
+    for (let i = 0; i < parts.length - 1; i++) {
       const part = parts[i];
       if (!currentNode[part]) {
-        currentNode[part] = i === parts.length - 1 ? null : {};
+        currentNode[part] = {};
       }
-      if (currentNode[part] !== null) {
-        currentNode = currentNode[part] as TreeNode;
+      currentNode = currentNode[part];
+    }
+
+    const fileName = parts[parts.length - 1];
+    currentNode[fileName] = null;
+  }
+
+  function convertNode(
+    node: TreeNode,
+    nodeName?: string
+  ): TreeItem[] | TreeItem {
+    const entries = Object.entries(node);
+    if (entries.length === 0) return nodeName || '';
+
+    const children: TreeItem[] = [];
+
+    for (const [key, value] of entries) {
+      if (value === null) {
+        // It's a file
+        children.push(key);
+      } else {
+        // It's a directory
+        const subTree = convertNode(value, key);
+        if (Array.isArray(subTree)) {
+          children.push([key, ...subTree]);
+        } else {
+          children.push([key, subTree]);
+        }
       }
     }
+
+    return children;
   }
 
-  function buildTreeItems(node: TreeNode): TreeItem[] {
-    return Object.entries(node).map(([key, value]) =>
-      value === null ? key : [key, ...buildTreeItems(value)]
-    );
-  }
-
-  return buildTreeItems(tree);
+  const result = convertNode(tree);
+  return Array.isArray(result) ? result : [result];
 }
