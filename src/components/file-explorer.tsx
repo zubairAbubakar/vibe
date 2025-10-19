@@ -145,7 +145,7 @@ export const FileExplorer = ({ files }: FileExplorerProps) => {
             <div className="flex-1 overflow-auto">
               <CodeView
                 code={files[selectedFile]}
-                language={getLanguageFromExtension(selectedFile)}
+                lang={getLanguageFromExtension(selectedFile)}
               />
             </div>
           </div>

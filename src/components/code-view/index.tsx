@@ -10,17 +10,17 @@ import './code-theme.css';
 
 interface CodeViewProps {
   code: string;
-  language: string;
+  lang: string;
 }
 
-export const CodeView = ({ code, language }: CodeViewProps) => {
+export const CodeView = ({ code, lang }: CodeViewProps) => {
   useEffect(() => {
     Prism.highlightAll();
-  }, []);
+  }, [code]);
 
   return (
     <pre className="p-2 bg-transparent border-none rounded-none m-0 text-xs">
-      <code className={`language-${language}`}>{code}</code>
+      <code className={`language-${lang}`}>{code}</code>
     </pre>
   );
 };
