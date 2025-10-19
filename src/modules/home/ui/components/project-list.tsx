@@ -34,10 +34,13 @@ export const ProjectList = () => {
                     height={32}
                     className="object-contain"
                   />
-                  <div className="text-sm text-muted-foreground">
-                    {formatDistanceToNow(project.updatedAt, {
-                      addSuffix: true,
-                    })}
+                  <div className="flex flex-col">
+                    <h3 className="trucate font-medium">{project.name}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDistanceToNow(project.updatedAt, {
+                        addSuffix: true,
+                      })}
+                    </p>
                   </div>
                 </div>
               </Link>

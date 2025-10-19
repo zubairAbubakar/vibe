@@ -65,7 +65,7 @@ export const ProjectForm = () => {
 
   return (
     <Form {...form}>
-      <section className="space-x-6">
+      <section className="space-y-6">
         <form
           onSubmit={form.handleSubmit(onSubmit)}
           className={cn(
