@@ -33,7 +33,7 @@ export const codeAgentFunction = inngest.createFunction(
       description:
         'An AI agent that can write and execute code in a code interpreter sandbox.',
       system: PROMPT,
-      model: openai({ model: 'gpt-4o' }),
+      model: openai({ model: 'gpt-4.1' }),
       tools: [
         createTool({
           name: 'terminal',
