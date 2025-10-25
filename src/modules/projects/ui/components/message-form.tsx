@@ -1,16 +1,18 @@
 import z from 'zod';
+import { toast } from 'sonner';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
 import { ArrowUpIcon, Loader2Icon } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import TextareaAutoSize from 'react-textarea-autosize';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { cn } from '@/lib/utils';
 import { useTRPC } from '@/trpc/client';
 import { Form, FormField } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
+import { Usage } from './usage';
 
 interface Props {
   projectId: string;
@@ -26,8 +28,11 @@ const formSchema = z.object({
 export const MessageForm = ({ projectId }: Props) => {
   const [isFocused, setIsFocused] = useState(false);
 
+  const router = useRouter();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+
+  const { data: usage } = useQuery(trpc.usage.status.queryOptions());
 
   const createMessage = useMutation(
     trpc.messages.create.mutationOptions({
@@ -36,10 +41,14 @@ export const MessageForm = ({ projectId }: Props) => {
         queryClient.invalidateQueries(
           trpc.messages.getMany.queryOptions({ projectId })
         );
-        // TODO: Invalidate usage status
+        queryClient.invalidateQueries(trpc.usage.status.queryOptions());
       },
-      onError: (err) => {
-        toast.error(err.message);
+      onError: (error) => {
+        toast.error(error.message);
+
+        if (error.data?.code === 'TOO_MANY_REQUESTS') {
+          router.push('/pricing');
+        }
       },
     })
   );
@@ -56,12 +65,18 @@ export const MessageForm = ({ projectId }: Props) => {
     });
   };
 
-  const showUsage = false;
+  const showUsage = !!usage;
   const isPending = createMessage.isPending;
   const isButtonDisabled = isPending || !form.formState.isValid;
 
   return (
     <Form {...form}>
+      {showUsage && (
+        <Usage
+          usagePoints={usage.remainingPoints}
+          millisecondsBeforeNext={usage.msBeforeNext}
+        />
+      )}
       <form
         onSubmit={form.handleSubmit(onSubmit)}
         className={cn(

@@ -1,6 +1,7 @@
 import { MessageRole, MessageType } from '@/generated/prisma';
 import { inngest } from '@/inngest/client';
 import { prisma } from '@/lib/prisma';
+import { consumeCredits } from '@/lib/usage';
 import { protectedProcedure, createTRPCRouter } from '@/trpc/init';
 import { TRPCError } from '@trpc/server';
 import z from 'zod';
@@ -46,6 +47,23 @@ export const messagesRouter = createTRPCRouter({
           code: 'NOT_FOUND',
           message: 'Project not found',
         });
+      }
+
+      try {
+        await consumeCredits();
+      } catch (error) {
+        if (error instanceof Error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error.message,
+          });
+        } else {
+          throw new TRPCError({
+            code: 'TOO_MANY_REQUESTS',
+            message:
+              'Usage credit limit exceeded, consider upgrading your plan.',
+          });
+        }
       }
 
       const createdMessage = await prisma.message.create({
