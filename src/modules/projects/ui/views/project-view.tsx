@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useAuth } from '@clerk/nextjs';
 import { Suspense, useState } from 'react';
-import { useSuspenseQuery } from '@tanstack/react-query';
 import { CodeIcon, CrownIcon, EyeIcon } from 'lucide-react';
 
 import {
@@ -11,16 +10,15 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable';
-import { useTRPC } from '@/trpc/client';
 import { ProjectHeader } from '../components/project-header';
 import { MessagesContainer } from '../components/messages-container';
 import { Fragment } from '@/generated/prisma';
 import { FragmentWebview } from '../components/fragment-webview';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { CodeView } from '@/components/code-view';
 import { FileExplorer } from '@/components/file-explorer';
 import { UserControl } from '@/components/user-control';
+import { ErrorBoundary } from 'react-error-boundary';
 
 interface Props {
   projectId: string;
@@ -33,12 +31,6 @@ export const ProjectView = ({ projectId }: Props) => {
   const { has } = useAuth();
   const isProUser = has?.({ plan: 'pro' });
 
-  const trpc = useTRPC();
-
-  const { data: messages } = useSuspenseQuery(
-    trpc.messages.getMany.queryOptions({ projectId })
-  );
-
   return (
     <div className="h-screen">
       <ResizablePanelGroup direction="horizontal">
@@ -47,17 +39,27 @@ export const ProjectView = ({ projectId }: Props) => {
           minSize={20}
           className="flex flex-col min-h-0"
         >
-          <Suspense fallback={<div>Loading project...</div>}>
-            <ProjectHeader projectId={projectId} />
-          </Suspense>
+          <ErrorBoundary
+            fallback={
+              <div>Something went wrong loading the project header.</div>
+            }
+          >
+            <Suspense fallback={<div>Loading project...</div>}>
+              <ProjectHeader projectId={projectId} />
+            </Suspense>
+          </ErrorBoundary>
 
-          <Suspense fallback={<div>Loading messages...</div>}>
-            <MessagesContainer
-              projectId={projectId}
-              activeFragment={activeFragment}
-              setActiveFragment={setActiveFragment}
-            />
-          </Suspense>
+          <ErrorBoundary
+            fallback={<div>Something went wrong loading the messages.</div>}
+          >
+            <Suspense fallback={<div>Loading messages...</div>}>
+              <MessagesContainer
+                projectId={projectId}
+                activeFragment={activeFragment}
+                setActiveFragment={setActiveFragment}
+              />
+            </Suspense>
+          </ErrorBoundary>
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={65} minSize={50}>
