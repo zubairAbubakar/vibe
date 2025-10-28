@@ -11,7 +11,14 @@ import {
 
 import { inngest } from './client';
 import { getSandbox, lastAssistantTextMessageContent } from './utils';
-import { FRAGMENT_TITLE_PROMPT, PROMPT, RESPONSE_PROMPT } from '@/prompts';
+import {
+  FRAGMENT_TITLE_PROMPT,
+  PROMPT,
+  RESPONSE_PROMPT,
+  HTML5_GAME_PROMPT,
+  HTML5_GAME_TITLE_PROMPT,
+  HTML5_GAME_RESPONSE_PROMPT,
+} from '@/prompts';
 import z from 'zod';
 import { prisma } from '@/lib/prisma';
 import { MessageRole, MessageType } from '@/generated/prisma';
@@ -22,16 +29,43 @@ interface AgentState {
   files: { [path: string]: string };
 }
 
+// Helper function to detect game-related requests
+function isGameRequest(userInput: string): boolean {
+  const gameKeywords = [
+    'game',
+    'play',
+    'platformer',
+    'shooter',
+    'puzzle',
+    'runner',
+    'arcade',
+    'pong',
+    'snake',
+    'tetris',
+    'flappy',
+    'match-3',
+    'racing',
+  ];
+  const lowercaseInput = userInput.toLowerCase();
+  return gameKeywords.some((keyword) => lowercaseInput.includes(keyword));
+}
+
 export const codeAgentFunction = inngest.createFunction(
   { id: 'code-agent' },
   { event: 'code-agent/run' },
   async ({ event, step }) => {
+    // Determine if this is a game request early
+    const isGame = isGameRequest(event.data.value);
+
     const sandboxId = await step.run('get-sandbox-id', async () => {
-      const sandbox = await Sandbox.create('vibe-nextjs-test__-3');
+      // Use game-specific template for game requests
+      const templateId = isGame
+        ? 'gnh6zy51yg62wzvq6y34' // HTML5 game template with Phaser, PixiJS, Howler
+        : 'fba2w2kbrhzusocdi5qj'; // Standard Next.js template
+      const sandbox = await Sandbox.create(templateId);
       await sandbox.setTimeout(SANDBOX_TIMEOUT);
       return sandbox.sandboxId;
     });
-
     const previousMessages = await step.run(
       'get-previous-messages',
       async () => {
@@ -67,7 +101,7 @@ export const codeAgentFunction = inngest.createFunction(
       name: 'code-agent',
       description:
         'An AI agent that can write and execute code in a code interpreter sandbox.',
-      system: PROMPT,
+      system: isGame ? HTML5_GAME_PROMPT : PROMPT,
       model: openai({ model: 'gpt-4.1' }),
       tools: [
         createTool({
@@ -175,7 +209,7 @@ export const codeAgentFunction = inngest.createFunction(
     const network = createNetwork<AgentState>({
       name: 'coding-agent-network',
       agents: [codeAgent],
-      maxIter: 15,
+      maxIter: isGame ? 25 : 15,
       defaultState: state,
       router: async ({ network }) => {
         const summary = network.state.data.summary;
@@ -194,7 +228,7 @@ export const codeAgentFunction = inngest.createFunction(
       name: 'fragment-title-generator',
       description:
         'Generates a title for a code fragment based on its task summary.',
-      system: FRAGMENT_TITLE_PROMPT,
+      system: isGame ? HTML5_GAME_TITLE_PROMPT : FRAGMENT_TITLE_PROMPT,
       model: openai({ model: 'gpt-4o' }),
     });
 
@@ -202,7 +236,7 @@ export const codeAgentFunction = inngest.createFunction(
       name: 'response-generator',
       description:
         'Generates a response for a code fragment based on its task summary.',
-      system: RESPONSE_PROMPT,
+      system: isGame ? HTML5_GAME_RESPONSE_PROMPT : RESPONSE_PROMPT,
       model: openai({ model: 'gpt-4o' }),
     });
 
